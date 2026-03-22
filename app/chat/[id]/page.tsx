@@ -16,8 +16,9 @@ const SingleChatPage = () => {
     sendMessage,
     selectedAI,
     setSelectedAI,
-    createNewChat,
+    startNewSession,
     chats,
+    currentSessionConfig,
   } = useChat();
   const { user } = useAuth();
   const params = useParams();
@@ -50,7 +51,8 @@ const SingleChatPage = () => {
         setSelectedAI={setSelectedAI}
         user={user}
         currentChatId={currentChatId}
-        createNewChat={createNewChat}
+        currentSessionConfig={currentSessionConfig}
+        startNewSession={startNewSession}
         routerPush={router.push}
       />
     </div>

@@ -3,6 +3,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import ChatSidebar from "@/components/ChatSidebar";
 import { AuthProvider } from "@/hooks/useAuth";
+import { ChatProvider } from "@/hooks/useChat";
 import { Roboto } from "next/font/google";
 
 const roboto = Roboto({
@@ -44,10 +45,12 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>
-            <div className="min-h-screen flex">
-              <ChatSidebar />
-              {children}
-            </div>
+            <ChatProvider>
+              <div className="min-h-screen flex">
+                <ChatSidebar />
+                {children}
+              </div>
+            </ChatProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

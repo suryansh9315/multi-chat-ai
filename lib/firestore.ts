@@ -14,7 +14,7 @@ import {
   increment,
 } from "firebase/firestore";
 import { db } from "./firebase";
-import type { Message, Chat, AIProvider } from "@/types";
+import type { Message, Chat, AIProvider, ChatSessionConfig } from "@/types";
 
 export const messagesCollection = collection(db, "messages");
 export const chatsCollection = collection(db, "chats");
@@ -50,6 +50,7 @@ export const createChat = async (
   title: string,
   aiProvider: AIProvider,
   userId?: string,
+  sessionConfig?: ChatSessionConfig,
 ): Promise<string> => {
   try {
     const chatData = {
@@ -58,6 +59,7 @@ export const createChat = async (
       aiProvider,
       messageCount: 0,
       isAnonymous: !userId || userId === "anonymous",
+      sessionConfig: sessionConfig || null,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
@@ -144,6 +146,7 @@ export const subscribeToUserChats = (
         messageCount: data.messageCount || 0,
         lastMessage: data.lastMessage,
         isAnonymous: data.isAnonymous,
+        sessionConfig: data.sessionConfig || undefined,
         createdAt:
           data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
         updatedAt:
@@ -181,6 +184,7 @@ export const subscribeToUserChatsSimple = (
         messageCount: data.messageCount || 0,
         lastMessage: data.lastMessage,
         isAnonymous: data.isAnonymous,
+        sessionConfig: data.sessionConfig || undefined,
         createdAt:
           data.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
         updatedAt:

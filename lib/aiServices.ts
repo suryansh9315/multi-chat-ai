@@ -1,9 +1,8 @@
 // lib/aiServices.ts
-import type { AIProvider } from "@/types";
+import type { OpenAIChatMessage } from "@/types";
 
 export const callOpenAI = async (
-  message: string,
-  provider: AIProvider,
+  messages: OpenAIChatMessage[],
   model?: string,
 ) => {
   try {
@@ -13,7 +12,7 @@ export const callOpenAI = async (
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        message,
+        messages,
         model,
       }),
     });

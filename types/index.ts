@@ -11,6 +11,13 @@ export interface Message {
   chatId: string;
 }
 
+export interface ChatSessionConfig {
+  personaId: string;
+  personaLabel: string;
+  customInstructions: string;
+  systemPrompt: string;
+}
+
 export interface Chat {
   id: string;
   title: string;
@@ -21,9 +28,15 @@ export interface Chat {
   messageCount: number;
   lastMessage?: string;
   isAnonymous?: boolean;
+  sessionConfig?: ChatSessionConfig;
 }
 
 export type AIProvider = "chatgpt";
+
+export interface OpenAIChatMessage {
+  role: "system" | "user" | "assistant";
+  content: string;
+}
 
 export interface AIOption {
   id: AIProvider;

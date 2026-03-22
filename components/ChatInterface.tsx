@@ -1,17 +1,18 @@
 "use client";
-import { ChevronDown, Send, Sparkles } from "lucide-react";
+
+import { ChevronDown, Plus, Send, Sparkles } from "lucide-react";
 import Link from "next/link";
 import React, {
   Dispatch,
   FormEvent,
   SetStateAction,
-  useEffect,
-  useRef,
   useState,
+  useRef,
 } from "react";
 import { Badge } from "./ui/badge";
 import ModeToggle from "./ModeToggle";
 import { aiOptions } from "@/constants/data";
+import NewSessionModal from "./NewSessionModal";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,19 +22,21 @@ import {
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
 import { Input } from "./ui/input";
-import { AIProvider, Message, User } from "@/types";
+import { AIProvider, ChatSessionConfig, Message, User } from "@/types";
 import { ScrollArea } from "./ui/scroll-area";
 import MessageList from "./MessageList";
+
 interface ChatInterfaceProps {
   messages: Message[];
   isAnonymous: boolean;
   isLoading: boolean;
-  sendMessage: (text: string) => Promise<void>;
+  sendMessage: (text: string) => Promise<string | null>;
   selectedAI: AIProvider;
   setSelectedAI: Dispatch<SetStateAction<AIProvider>>;
   user: User | null;
   currentChatId: string | null;
-  createNewChat: () => Promise<string | null>;
+  currentSessionConfig: ChatSessionConfig;
+  startNewSession: (sessionConfig: ChatSessionConfig) => Promise<string | null>;
   routerPush: (url: string) => void;
 }
 
@@ -46,12 +49,13 @@ const ChatInterface = ({
   setSelectedAI,
   user,
   currentChatId,
-  createNewChat,
+  currentSessionConfig,
+  startNewSession,
   routerPush,
 }: ChatInterfaceProps) => {
   const [inputMessage, setInputMessage] = useState("");
+  const [showSessionModal, setShowSessionModal] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
   const currentAI =
     aiOptions.find((ai) => ai.id === selectedAI) || aiOptions[0];
 
@@ -60,56 +64,40 @@ const ChatInterface = ({
     if (!inputMessage.trim() || isLoading) return;
 
     try {
-      if (user && !isAnonymous && !currentChatId) {
-        const newChatId = await createNewChat();
+      const createdChatId = await sendMessage(inputMessage);
+      setInputMessage("");
+      inputRef.current?.focus();
 
-        if (newChatId && newChatId !== "anonymous") {
-          await sendMessage(inputMessage);
-          setInputMessage("");
-          inputRef.current?.focus();
-          routerPush(`/chat/${newChatId}`);
-        } else {
-          throw new Error("Failed to create new chat");
-        }
-      } else {
-        await sendMessage(inputMessage);
-        setInputMessage("");
-        inputRef.current?.focus();
+      if (user && !isAnonymous && !currentChatId && createdChatId) {
+        routerPush(`/chat/${createdChatId}`);
       }
     } catch (error) {
       console.error("Error sending message:", error);
     }
   };
 
-  // Scroll to the bottom when messages change
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages]);
   return (
-    <div className="flex flex-col h-screen bg-background w-full">
-      {/* Header */}
-      <header className="border-b bg-card/50 backdrop-blur supports-backdrop-filter:bg-card/60 px-4">
+    <div className="flex h-screen w-full flex-col bg-background">
+      <header className="border-b bg-card/50 px-4 backdrop-blur supports-backdrop-filter:bg-card/60">
         <div className="container flex h-16 items-center justify-between">
-          <Link href={"/"} className="flex items-center space-x-4">
+          <Link href="/" className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
-              <div className="ml-8 lg:ml-0 flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-r from-purple-500 to-pink-500">
+              <div className="ml-8 flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-r from-purple-500 to-pink-500 lg:ml-0">
                 <Sparkles className="h-4 w-4 text-white" />
               </div>
               <div>
                 <div className="flex items-center">
-                  <h1 className="text-lg font-semibold hidden sm:block">
+                  <h1 className="hidden text-lg font-semibold sm:block">
                     AI Chat Hub
                   </h1>
                   <Badge
                     variant={isAnonymous ? "secondary" : "default"}
-                    className="md:ml-2 border border-primary/50"
+                    className="border border-primary/50 md:ml-2"
                   >
                     {isAnonymous ? "Anonymous" : "Signed In"}
                   </Badge>
                 </div>
-                <p className="text-xs text-muted-foreground hidden sm:block">
+                <p className="hidden text-xs text-muted-foreground sm:block">
                   Multiple AI assistants in one place
                 </p>
               </div>
@@ -117,15 +105,20 @@ const ChatInterface = ({
           </Link>
           <div className="flex items-center space-x-4">
             <ModeToggle />
+            <Button
+              variant="outline"
+              onClick={() => setShowSessionModal(true)}
+              className="hidden sm:inline-flex"
+            >
+              <Plus className="h-4 w-4" />
+              New Session
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button
-                  variant={"outline"}
-                  className="max-w-50 justify-between"
-                >
+                <Button variant="outline" className="max-w-50 justify-between">
                   <div className="flex items-center space-x-2">
                     <div
-                      className={`p-1 rounded-sm bg-linear-to-r ${currentAI.color}`}
+                      className={`rounded-sm bg-linear-to-r p-1 ${currentAI.color}`}
                     >
                       <currentAI.icon className="h-4 w-4 text-white" />
                     </div>
@@ -134,20 +127,20 @@ const ChatInterface = ({
                   <ChevronDown className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-60 mr-3">
-                {aiOptions?.map((ai) => (
+              <DropdownMenuContent className="mr-3 w-60">
+                {aiOptions.map((ai) => (
                   <DropdownMenuItem
                     key={ai.id}
                     onClick={() => setSelectedAI(ai.id)}
                   >
                     <div className="flex items-center space-x-3 p-3">
                       <div
-                        className={`h-8 w-8 rounded-lg bg-linear-to-r ${ai.color} flex items-center justify-center`}
+                        className={`flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-r ${ai.color}`}
                       >
                         <ai.icon className="h-4 w-4 text-white" />
                       </div>
                       <div className="flex-1">
-                        <h2 className="font-medium">{ai?.name}</h2>
+                        <h2 className="font-medium">{ai.name}</h2>
                         <p className="text-xs text-muted-foreground">
                           {ai.description}
                         </p>
@@ -160,40 +153,43 @@ const ChatInterface = ({
           </div>
         </div>
       </header>
-      {/* Main Chat Area */}
-      <div className="flex-1 py-6 px-4">
-        <div className="w-full space-y-6 h-full flex flex-col justify-between">
-          {/* Welcome Message */}
-          {messages?.length === 0 && (
+
+      <div className="flex-1 px-4 py-6">
+        <div className="flex h-full w-full flex-col justify-between space-y-6">
+          {messages.length === 0 && (
             <div>
-              <div className="mb-6 bg-linear-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-xl p-4">
+              <div className="mb-6 rounded-xl border border-purple-500/20 bg-linear-to-r from-purple-500/10 to-pink-500/10 p-4">
                 <div className="flex items-start space-x-3">
-                  <div className="w-8 h-8 bg-linear-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center shrink-0">
-                    <Sparkles className="w-4 h-4 text-white" />
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-linear-to-r from-purple-500 to-pink-500">
+                    <Sparkles className="h-4 w-4 text-white" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-primary mb-1">
-                      Welcome to AI Chat HUB! 🎉
+                    <h3 className="mb-1 font-semibold text-primary">
+                      Welcome to AI Chat Hub
                     </h3>
-                    <p className="text-primary/80 text-sm mb-2">
+                    <p className="mb-2 text-sm text-primary/80">
                       {isAnonymous
                         ? "You're chatting anonymously. Messages won't be saved unless you sign in."
-                        : "You're signed in! Your chat history will be saved automatically."}
+                        : "You're signed in. Your chat history will be saved automatically."}
                     </p>
                     <div className="flex flex-wrap gap-2">
-                      <span className="inline-flex items-center px-2 py-1 bg-white/10 rounded-lg text-xs">
-                        💬 Type a message below to start
+                      <span className="inline-flex items-center rounded-lg bg-white/10 px-2 py-1 text-xs">
+                        Persona: {currentSessionConfig.personaLabel}
                       </span>
-                      <span className="inline-flex items-center px-2 py-1 bg-white/10 rounded-lg text-xs">
-                        🤖 Switch AI models anytime
+                      <span className="inline-flex items-center rounded-lg bg-white/10 px-2 py-1 text-xs">
+                        Type a message below to start
+                      </span>
+                      <span className="inline-flex items-center rounded-lg bg-white/10 px-2 py-1 text-xs">
+                        Switch AI models anytime
                       </span>
                     </div>
                   </div>
                 </div>
               </div>
+
               <Card className="border-dashed">
                 <CardContent className="pt-6">
-                  <div className="text-center space-y-4">
+                  <div className="space-y-4 text-center">
                     <div
                       className={`mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-linear-to-r ${currentAI.color}`}
                     >
@@ -201,24 +197,24 @@ const ChatInterface = ({
                     </div>
                     <div>
                       <h3 className="text-lg font-semibold">
-                        Chat with {currentAI?.name}
+                        Chat with {currentAI.name}
                       </h3>
                       <p className="text-muted-foreground">
                         {currentAI.description}
                       </p>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 max-w-lg mx-auto pt-4 gap-2">
+                    <div className="mx-auto grid max-w-lg grid-cols-1 gap-2 pt-4 sm:grid-cols-2">
                       {[
                         "What can you help me with?",
                         "Explain quantum computing",
                         "Write a creative story",
                         "Help me code a function",
-                      ].map((prompt, index) => (
+                      ].map((prompt) => (
                         <Button
-                          key={index}
+                          key={prompt}
                           onClick={() => setInputMessage(prompt)}
-                          variant={"ghost"}
-                          className="h-auto p-3 text-left justify-start border"
+                          variant="ghost"
+                          className="h-auto justify-start border p-3 text-left"
                         >
                           <span>{prompt}</span>
                         </Button>
@@ -229,10 +225,10 @@ const ChatInterface = ({
               </Card>
             </div>
           )}
-          {/* Messages */}
-          {messages?.length > 0 && (
+
+          {messages.length > 0 && (
             <Card className="flex-1">
-              <ScrollArea className="h-[60vh] p-4" ref={scrollRef}>
+              <ScrollArea className="h-[60vh] p-4">
                 <MessageList
                   messages={messages}
                   isLoading={isLoading}
@@ -241,14 +237,14 @@ const ChatInterface = ({
               </ScrollArea>
             </Card>
           )}
-          {/* Input Area */}
+
           <Card>
             <CardContent className="pt-6">
               <form onSubmit={handleSendMessage} className="flex space-x-2">
                 <div className="flex-1">
                   <Input
                     ref={inputRef}
-                    placeholder={`Message ${currentAI?.name}...`}
+                    placeholder={`Message ${currentAI.name}...`}
                     value={inputMessage}
                     onChange={(e) => setInputMessage(e.target.value)}
                     className="min-h-12"
@@ -259,15 +255,27 @@ const ChatInterface = ({
                   type="submit"
                   disabled={!inputMessage.trim() || isLoading}
                   className="h-12 w-12"
-                  size={"icon"}
+                  size="icon"
                 >
-                  <Send className="w-4 h-4" />
+                  <Send className="h-4 w-4" />
                 </Button>
               </form>
             </CardContent>
           </Card>
         </div>
       </div>
+
+      <NewSessionModal
+        isOpen={showSessionModal}
+        onClose={() => setShowSessionModal(false)}
+        onSubmit={async (sessionConfig) => {
+          const newChatId = await startNewSession(sessionConfig);
+
+          if (newChatId && newChatId !== "anonymous") {
+            routerPush(`/chat/${newChatId}`);
+          }
+        }}
+      />
     </div>
   );
 };

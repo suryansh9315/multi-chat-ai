@@ -1,23 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
+import type { OpenAIChatMessage } from "@/types";
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, model = "gpt-3.5-turbo" } = await request.json();
-    if (!message) {
+    const {
+      messages,
+      model = "gpt-4o-mini",
+    }: { messages?: OpenAIChatMessage[]; model?: string } =
+      await request.json();
+
+    if (!messages?.length) {
       return NextResponse.json(
         {
-          error: "Message is required",
+          error: "Messages are required",
         },
         { status: 400 },
       );
     }
 
     const completion = await openai.chat.completions.create({
-      messages: [{ role: "user", content: message }],
+      messages,
       model,
       max_tokens: 1000,
       temperature: 0.7,
