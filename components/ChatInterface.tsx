@@ -77,7 +77,7 @@ const ChatInterface = ({
   };
 
   return (
-    <div className="flex h-screen w-full flex-col bg-background">
+    <div className="flex min-h-0 h-full w-full flex-1 flex-col overflow-hidden bg-background">
       <header className="border-b bg-card/50 px-4 backdrop-blur supports-backdrop-filter:bg-card/60">
         <div className="container flex h-16 items-center justify-between">
           <Link href="/" className="flex items-center space-x-4">
@@ -95,6 +95,9 @@ const ChatInterface = ({
                     className="border border-primary/50 md:ml-2"
                   >
                     {isAnonymous ? "Anonymous" : "Signed In"}
+                  </Badge>
+                  <Badge variant="outline" className="ml-2">
+                    {currentSessionConfig.personaLabel}
                   </Badge>
                 </div>
                 <p className="hidden text-xs text-muted-foreground sm:block">
@@ -154,8 +157,8 @@ const ChatInterface = ({
         </div>
       </header>
 
-      <div className="flex-1 px-4 py-6">
-        <div className="flex h-full w-full flex-col justify-between space-y-6">
+      <div className="flex min-h-0 flex-1 flex-col px-4 py-6">
+        <div className="flex min-h-0 h-full w-full flex-col justify-between space-y-6">
           {messages.length === 0 && (
             <div>
               <div className="mb-6 rounded-xl border border-purple-500/20 bg-linear-to-r from-purple-500/10 to-pink-500/10 p-4">
@@ -227,8 +230,20 @@ const ChatInterface = ({
           )}
 
           {messages.length > 0 && (
-            <Card className="flex-1">
-              <ScrollArea className="h-[60vh] p-4">
+            <Card className="flex min-h-0 flex-1 flex-col">
+              <CardContent className="border-b bg-muted/20 py-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="secondary">
+                    Persona: {currentSessionConfig.personaLabel}
+                  </Badge>
+                  {currentSessionConfig.customInstructions && (
+                    <span className="text-sm text-muted-foreground">
+                      {currentSessionConfig.customInstructions}
+                    </span>
+                  )}
+                </div>
+              </CardContent>
+              <ScrollArea className="min-h-0 flex-1 p-4">
                 <MessageList
                   messages={messages}
                   isLoading={isLoading}

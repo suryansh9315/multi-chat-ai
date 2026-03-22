@@ -15,12 +15,14 @@ import { useAuth } from "./useAuth";
 import {
   addMessage,
   createChat,
+  updateChatTitle,
   subscribeToMessages,
   subscribeToUserChatsSimple,
   deleteChat as deleteChatFromDB,
 } from "@/lib/firestore";
 import { callOpenAI } from "@/lib/aiServices";
 import {
+  buildConversationTitle,
   buildSessionConfig,
   buildSessionTitle,
   defaultSessionConfig,
@@ -245,6 +247,13 @@ export const ChatProvider = ({ children }: { children: ReactNode }) => {
           trimmedText,
           sessionConfig,
         );
+
+        if (history.length === 0) {
+          await updateChatTitle(
+            chatId,
+            buildConversationTitle(sessionConfig, trimmedText),
+          );
+        }
 
         await addMessage(chatId, trimmedText, "user", selectedAI, user.uid);
 

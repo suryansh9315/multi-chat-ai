@@ -91,4 +91,17 @@ export const buildSessionTitle = (sessionConfig: ChatSessionConfig) => {
   return sessionConfig.personaLabel;
 };
 
+export const buildConversationTitle = (
+  sessionConfig: ChatSessionConfig,
+  firstMessage: string,
+) => {
+  const trimmedMessage = firstMessage.trim();
+  const shortenedMessage =
+    trimmedMessage.length > 40
+      ? `${trimmedMessage.slice(0, 40)}...`
+      : trimmedMessage;
+
+  return `${sessionConfig.personaLabel}: ${shortenedMessage}`;
+};
+
 export const defaultSessionConfig = buildSessionConfig();

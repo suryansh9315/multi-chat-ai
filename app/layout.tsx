@@ -46,7 +46,7 @@ export default function RootLayout({
         >
           <AuthProvider>
             <ChatProvider>
-              <div className="min-h-screen flex">
+              <div className="flex h-screen overflow-hidden">
                 <ChatSidebar />
                 {children}
               </div>

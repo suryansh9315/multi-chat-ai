@@ -89,6 +89,19 @@ export const updateChatLastMessage = async (
   }
 };
 
+export const updateChatTitle = async (chatId: string, title: string) => {
+  try {
+    const chatRef = doc(chatsCollection, chatId);
+    await updateDoc(chatRef, {
+      title,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error("Error updating chat title:", error);
+    throw error;
+  }
+};
+
 export const subscribeToMessages = (
   chatId: string,
   callback: (messages: Message[]) => void,

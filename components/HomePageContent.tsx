@@ -20,7 +20,7 @@ const HomePageContent = () => {
   } = useChat();
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-0 flex-1 overflow-hidden">
       {authLoading && <AppLoading />}
       <ChatInterface
         messages={messages}
